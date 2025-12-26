@@ -82,7 +82,7 @@ class LogTrainer(Trainer):
         self.orig_W = None
         self.gradient_accumulation_counter = 0
 
-    def training_stepdef (self, model: nn.Module, inputs: Dict[str, Union[torch.Tensor, Any]], *args, **kwargs) -> torch.Tensor:
+    def training_step (self, model: nn.Module, inputs: Dict[str, Union[torch.Tensor, Any]], *args, **kwargs) -> torch.Tensor:
         if not do_log:
             return super().training_step(model, inputs, *args, **kwargs)
         if self.is_peft:
