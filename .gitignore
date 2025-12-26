@@ -1,0 +1,27 @@
+# data / cache
+data_cache/
+*.pkl
+*.pt
+*.bin
+*.safetensors
+*.ckpt
+*.npz
+
+# logs
+wandb/
+logs/
+*.log
+
+# python
+__pycache__/
+*.pyc
+
+# secrets
+.env
+*.key
+*.pem
+*token*
+*hf_*
+
+# shell scripts with secrets
+t5.sh

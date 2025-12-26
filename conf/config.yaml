@@ -1,0 +1,13 @@
+defaults:
+  - _self_
+  - model: llama
+dry_run: False
+wandb:
+  project: "xxx"
+  name: null
+  entity: "xxx"
+hydra:
+  sweeper:
+    params:
+      ++dataset_name: meta_math
+      ++seed: 42
