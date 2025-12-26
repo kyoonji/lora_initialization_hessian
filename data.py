@@ -301,7 +301,7 @@ def load_flan():
 def load_meta_math(max_tokens=512):
     dataset = load_dataset("meta-math/MetaMathQA", split='train')
     from transformers import AutoTokenizer
-    tokenizer = AutoTokenizer.from_pretrained("meta-llama/Llama-2-7b-hf")
+    tokenizer = AutoTokenizer.from_pretrained("TinyLlama/TinyLlama-1.1B-Chat-v1.0")
     def preprocess(data):
         return {
             "x": f'Q: {data["query"]}\nA: ',
