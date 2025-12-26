@@ -1,13 +1,37 @@
 defaults:
   - _self_
-  - model: llama
-dry_run: False
+  - model: tinyllama
+
+seed: 42
+dataset_name: meta_math
+dry_run: false
+
 wandb:
-  project: "xxx"
+  project: "lora_initialize_hessian"
   name: null
-  entity: "xxx"
-hydra:
-  sweeper:
-    params:
-      ++dataset_name: meta_math
-      ++seed: 42
+  entity: "yoonji0821-myongji-university"
+
+peft:
+  use_peft: true
+  use_rslora: false
+  lora_r: 8
+  lora_relative_r: null
+  lora_target_modules: all
+  train_embeddings: false
+  lora_alpha: 16
+  lora_dropout: 0.05
+  use_loraplus: false
+  loraplus_lr_ratio: 1.0
+  dora: false
+  adalora: false
+
+init:
+  mode: hessian
+  bsz: 4
+  iters: 1
+  max_length: 512
+  scale: gd        # 선택
+  stable_gamma: 16.0
+
+model:
+  weight_decay: 0.0
