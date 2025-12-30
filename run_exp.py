@@ -1,7 +1,3 @@
-# run_exp.py
-# Hessian HVP = forward-over-reverse(jvp(grad(loss))) + PEFT LoRA init
-# 최적화 포인트: SVD 스케일 안정화, HVP 배치 평균화, 모듈 매칭 로직 강화
-
 import os
 import torch
 import torch.nn as nn
@@ -66,7 +62,7 @@ def reinit_lora_modules(name, module, init_config, peft_conf, **kwargs):
     U, S, V = torch.svd_lowrank(M, q=q, niter=16)
     V = V.T 
 
-    # [수정] 스케일 안정화: 특이값 S의 루트를 양쪽에 배분하여 초기 Loss 폭주 방지
+    # 스케일 안정화: 특이값 S의 루트를 양쪽에 배분하여 초기 Loss 폭주 방지
     S_sqrt = torch.sqrt(S[:r])
     B = U[:, :r] * S_sqrt.unsqueeze(0)      # (out, r)
     A = S_sqrt.unsqueeze(1) * V[:r, :]      # (r, in)
@@ -81,7 +77,7 @@ def reinit_lora_modules(name, module, init_config, peft_conf, **kwargs):
         A = A / (scaling_factor ** 0.5)
         B = B / (scaling_factor ** 0.5)
 
-    # 파라미터 업데이트 (copy_를 통한 메모리 안전성 확보)
+    # 파라미터 업데이트
     module.lora_B.default.weight.data.copy_(B.contiguous())
     module.lora_A.default.weight.data.copy_(A.contiguous())
 
@@ -128,7 +124,7 @@ def run_exp(cfg: DictConfig):
     )
     base_model_for_hvp = base_model_for_hvp.to("cuda").eval()
 
-    # HVP 배치 샘플링 (iters를 통한 평균화로 노이즈 감소)
+    # HVP 배치 샘플링
     num_hvp_samples = cfg.init.bsz * cfg.init.iters
     if isinstance(train_set, list):
         temp_set = train_set[:num_hvp_samples]
@@ -143,16 +139,12 @@ def run_exp(cfg: DictConfig):
     buffers0 = dict(base_model_for_hvp.named_buffers())
 
     def hvp_provider(lora_module, name):
-      # 1. 대상 레이어 이름 정규화 (PEFT의 복잡한 접두사 제거)
-      # 예: 'base_model.model.model.layers.0.self_attn.q_proj' -> 'model.layers.0.self_attn.q_proj'
       cleaned_name = name
       prefixes_to_remove = ["base_model.model.", "base_model.", "model.model."]
       for prefix in prefixes_to_remove:
         if cleaned_name.startswith(prefix):
           cleaned_name = cleaned_name[len(prefix):]
-        
-      # 가능한 후보군 생성
-      # 1. 정규화된 이름, 2. 뒤에서부터 찾은 이름 (q_proj 등)
+
       candidates = [cleaned_name, cleaned_name.replace("model.", "")]
         
       base_layer = None
@@ -162,8 +154,7 @@ def run_exp(cfg: DictConfig):
           base_layer = modules_hvp[cand]
           picked_name = cand
           break
-        
-      # 만약 그래도 못 찾았다면, 전체 리스트에서 부분 일치 검색 (가장 확실함)
+            
       if base_layer is None:
         for k, v in modules_hvp.items():
           if k in name or name in k:
@@ -172,7 +163,6 @@ def run_exp(cfg: DictConfig):
             break
 
       if base_layer is None:
-        # 에러 발생 시 현재 가용한 키 샘플을 보여주어 디버깅 도움
         sample_keys = list(modules_hvp.keys())[:5]
         raise KeyError(
           f"[HVP] Cannot find module for '{name}'. \n"
@@ -183,7 +173,6 @@ def run_exp(cfg: DictConfig):
       W = base_layer.weight
       v = torch.empty_like(W).bernoulli_(0.5).mul_(2).add_(-1) # Rademacher
         
-      # 파라미터 이름 찾기
       w_name = None
       for n, p in base_model_for_hvp.named_parameters():
         if p is W:
@@ -193,7 +182,7 @@ def run_exp(cfg: DictConfig):
       if w_name is None:
         raise RuntimeError(f"Could not find parameter name for {picked_name}")
 
-      # 2. 여러 배치를 순회하며 평균 HVP 계산 (기존 로직 유지)
+      # 2. 여러 배치를 순회하며 평균 HVP 계산
       total_Hv = None
       count = 0
       hvp_iters = getattr(cfg.init, "iters", 4)
