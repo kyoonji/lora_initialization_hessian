@@ -1,6 +1,6 @@
 defaults:
   - _self_
-  - model: tinyllama
+  - model: llama
 
 seed: 42
 dataset_name: meta_math
@@ -16,10 +16,17 @@ peft:
   use_rslora: false
   lora_r: 8
   lora_relative_r: null
-  lora_target_modules: all
+  lora_target_modules:
+    - q_proj
+    - k_proj
+    - v_proj
+    - o_proj
+    - gate_proj
+    - up_proj
+    - down_proj
   train_embeddings: false
   lora_alpha: 16
-  lora_dropout: 0.05
+  lora_dropout: 0.0
   use_loraplus: false
   loraplus_lr_ratio: 1.0
   dora: false
@@ -27,7 +34,7 @@ peft:
 
 init:
   mode: hessian
-  bsz: 4
+  bsz: 1
   iters: 1
   max_length: 512
   scale: gd        # 선택
